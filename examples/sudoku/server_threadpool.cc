@@ -12,7 +12,9 @@
 
 #include <utility>
 
+#ifdef __linux__
 #include <mcheck.h>
+#endif
 #include <stdio.h>
 #include <unistd.h>
 

@@ -1,6 +1,8 @@
 #include "tunnel.h"
 
+#ifdef __linux__
 #include <malloc.h>
+#endif
 #include <stdio.h>
 #include <sys/resource.h>
 
@@ -43,7 +45,9 @@ void onServerMessage(const TcpConnectionPtr& conn, Buffer* buf, Timestamp)
 
 void memstat()
 {
+#ifdef __linux__
   malloc_stats();
+#endif
 }
 
 int main(int argc, char* argv[])

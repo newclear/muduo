@@ -10,7 +10,9 @@
 
 #include <utility>
 
+#ifdef __linux__
 #include <mcheck.h>
+#endif
 #include <stdio.h>
 #include <unistd.h>
 
@@ -85,7 +87,9 @@ class EchoServer
 
 int main(int argc, char* argv[])
 {
+#ifdef __linux__
   mtrace();
+#endif
   LOG_INFO << "pid = " << getpid() << ", tid = " << CurrentThread::tid();
   if (argc > 1)
   {

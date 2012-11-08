@@ -16,6 +16,7 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <muduo/base/Thread.h>
 #include <muduo/base/Mutex.h>
 #include <muduo/base/Timestamp.h>
 #include <muduo/net/Callbacks.h>
@@ -29,6 +30,25 @@ namespace net
 class EventLoop;
 class Timer;
 class TimerId;
+
+class TimerTriger
+{
+public:
+    TimerTriger();
+    ~TimerTriger();
+    void resetTimerfd(Timestamp expiration);
+    void readTimerfd(Timestamp now);
+    int timerfd() { return timerfd_; }
+private:
+    int timerfd_;
+#ifdef __MACH__
+    int writefd_;
+    bool continueRunning_;
+    uint64_t expiration_;
+    Thread timerThread_;
+    void timerThread();
+#endif
+};
 
 ///
 /// A best efforts timer queue.
@@ -70,7 +90,7 @@ class TimerQueue : boost::noncopyable
   bool insert(Timer* timer);
 
   EventLoop* loop_;
-  const int timerfd_;
+  TimerTriger timertriger_;
   Channel timerfdChannel_;
   // Timer list sorted by expiration
   TimerList timers_;
