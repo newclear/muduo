@@ -8,7 +8,7 @@
 #include <vector>
 
 //#define _BSD_SOURCE
-#include <endian.h>
+//#include <endian.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -129,7 +129,8 @@ class File : boost::noncopyable
     ssize_t nr = ::fread(&x, 1, sizeof(int32_t), fp_);
     if (nr != sizeof(int32_t))
       throw logic_error("bad int32_t data");
-    return be32toh(x);
+    //return be32toh(x);
+    return ntohl(x);
   }
 
   uint8_t readUInt8()
@@ -278,7 +279,7 @@ struct tm TimeZone::toLocalTime(time_t seconds) const
     ::gmtime_r(&localSeconds, &localTime); // FIXME: fromUtcTime
     localTime.tm_isdst = local->isDst;
     localTime.tm_gmtoff = local->gmtOffset;
-    localTime.tm_zone = &data.abbreviation[local->arrbIdx];
+    localTime.tm_zone = const_cast<char*>(&data.abbreviation[local->arrbIdx]);
   }
 
   return localTime;

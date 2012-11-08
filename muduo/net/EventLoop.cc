@@ -19,7 +19,12 @@
 #include <boost/bind.hpp>
 
 #include <signal.h>
+#ifdef __linux__
 #include <sys/eventfd.h>
+#endif
+#ifdef __MACH__
+#include <unistd.h>
+#endif
 
 using namespace muduo;
 using namespace muduo::net;
@@ -30,15 +35,22 @@ __thread EventLoop* t_loopInThisThread = 0;
 
 const int kPollTimeMs = 10000;
 
-int createEventfd()
+int createEventfd(int fds[2])
 {
-  int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  if (evtfd < 0)
+  int ret = 0;
+#ifdef __linux__
+  ret = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  if (ret >= 0)
+    fd[1] = fd[0] = ret;
+#elif defined(__MACH__)
+  ret = pipe(fds);
+#endif
+  if(ret < 0)
   {
     LOG_SYSERR << "Failed in eventfd";
     abort();
   }
-  return evtfd;
+  return 0;
 }
 
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -70,10 +82,12 @@ EventLoop::EventLoop()
     threadId_(CurrentThread::tid()),
     poller_(Poller::newDefaultPoller(this)),
     timerQueue_(new TimerQueue(this)),
-    wakeupFd_(createEventfd()),
-    wakeupChannel_(new Channel(this, wakeupFd_)),
+    wakeupChannel_(NULL),
     currentActiveChannel_(NULL)
 {
+  memset(wakeupFd_, 0, sizeof(wakeupFd_));
+  createEventfd(wakeupFd_);
+  wakeupChannel_.reset(new Channel(this, wakeupFd_[0]));
   LOG_TRACE << "EventLoop created " << this << " in thread " << threadId_;
   if (t_loopInThisThread)
   {
@@ -92,7 +106,9 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
-  ::close(wakeupFd_);
+  ::close(wakeupFd_[0]);
+  if(wakeupFd_[1] != wakeupFd_[0])
+    ::close(wakeupFd_[1]);
   t_loopInThisThread = NULL;
 }
 
@@ -215,7 +231,7 @@ void EventLoop::abortNotInLoopThread()
 void EventLoop::wakeup()
 {
   uint64_t one = 1;
-  ssize_t n = sockets::write(wakeupFd_, &one, sizeof one);
+  ssize_t n = sockets::write(wakeupFd_[1], &one, sizeof one);
   if (n != sizeof one)
   {
     LOG_ERROR << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
@@ -225,7 +241,7 @@ void EventLoop::wakeup()
 void EventLoop::handleRead()
 {
   uint64_t one = 1;
-  ssize_t n = sockets::read(wakeupFd_, &one, sizeof one);
+  ssize_t n = sockets::read(wakeupFd_[0], &one, sizeof one);
   if (n != sizeof one)
   {
     LOG_ERROR << "EventLoop::handleRead() reads " << n << " bytes instead of 8";

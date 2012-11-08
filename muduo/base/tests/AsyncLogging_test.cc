@@ -3,6 +3,7 @@
 #include <muduo/base/Timestamp.h>
 
 #include <stdio.h>
+#include <libgen.h>
 #include <sys/resource.h>
 
 int kRollSize = 500*1000*1000;

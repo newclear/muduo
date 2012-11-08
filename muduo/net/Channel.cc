@@ -21,6 +21,16 @@ const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
 
+#ifdef __MACH__
+#define POLLRDHUP 0
+#endif
+
+const int Channel::kReadCheck = POLLIN | POLLPRI | POLLRDHUP;
+const int Channel::kWriteCheck = POLLOUT;
+const int Channel::kErrorCheck = POLLERR | POLLNVAL;
+const int Channel::kNotfdCheck = POLLNVAL;
+const int Channel::kCloseCheck = POLLHUP;
+
 Channel::Channel(EventLoop* loop, int fd__)
   : loop_(loop),
     fd_(fd__),
@@ -75,7 +85,7 @@ void Channel::handleEvent(Timestamp receiveTime)
 void Channel::handleEventWithGuard(Timestamp receiveTime)
 {
   eventHandling_ = true;
-  if ((revents_ & POLLHUP) && !(revents_ & POLLIN))
+  if ((revents_ & kCloseCheck) && !(revents_ & kReadCheck))
   {
     if (logHup_)
     {
@@ -84,20 +94,20 @@ void Channel::handleEventWithGuard(Timestamp receiveTime)
     if (closeCallback_) closeCallback_();
   }
 
-  if (revents_ & POLLNVAL)
+  if (revents_ & kNotfdCheck)
   {
     LOG_WARN << "Channel::handle_event() POLLNVAL";
   }
 
-  if (revents_ & (POLLERR | POLLNVAL))
+  if (revents_ & kErrorCheck)
   {
     if (errorCallback_) errorCallback_();
   }
-  if (revents_ & (POLLIN | POLLPRI | POLLRDHUP))
+  if (revents_ & kReadCheck)
   {
     if (readCallback_) readCallback_(receiveTime);
   }
-  if (revents_ & POLLOUT)
+  if (revents_ & kWriteCheck)
   {
     if (writeCallback_) writeCallback_();
   }

@@ -1,5 +1,6 @@
 #include <muduo/base/LogFile.h>
 #include <muduo/base/Logging.h>
+#include <libgen.h>
 
 boost::scoped_ptr<muduo::LogFile> g_logFile;
 

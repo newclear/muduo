@@ -13,7 +13,7 @@ set(CXX_FLAGS
  -D_FILE_OFFSET_BITS=64
  -Wall
  -Wextra
- -Werror
+ # -Werror
  -Wconversion
  -Wno-unused-parameter
  -Wold-style-cast
@@ -21,10 +21,11 @@ set(CXX_FLAGS
  -Wpointer-arith
  -Wshadow
  -Wwrite-strings
- -march=native
+ # -Wno-sign-conversion
+ # -march=native
  # -MMD
  # -std=c++0x
- -rdynamic
+ # -rdynamic
  )
 if(CMAKE_BUILD_BITS EQUAL 32)
   list(APPEND CXX_FLAGS "-m32")
@@ -32,6 +33,7 @@ endif()
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 
 set(CMAKE_CXX_COMPILER "g++")
+#set(CMAKE_CXX_COMPILER "clang++")
 #set(CMAKE_CXX_COMPILER "icpc")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -finline-limit=1000 -DNDEBUG")

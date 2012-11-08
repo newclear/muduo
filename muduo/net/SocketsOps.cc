@@ -16,7 +16,11 @@
 #include <fcntl.h>
 #include <stdio.h>  // snprintf
 #include <strings.h>  // bzero
+#include <sys/types.h>
 #include <sys/socket.h>
+#ifdef __MACH__
+#include <sys/uio.h>
+#endif
 #include <unistd.h>
 
 using namespace muduo;
@@ -59,7 +63,7 @@ void setNonBlockAndCloseOnExec(int sockfd)
 int sockets::createNonblockingOrDie()
 {
   // socket
-#if VALGRIND
+#if defined(VALGRIND) || !defined(__linux__)
   int sockfd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (sockfd < 0)
   {
@@ -98,7 +102,7 @@ void sockets::listenOrDie(int sockfd)
 int sockets::accept(int sockfd, struct sockaddr_in* addr)
 {
   socklen_t addrlen = sizeof *addr;
-#if VALGRIND
+#if defined(VALGRIND) || !defined(__linux__)
   int connfd = ::accept(sockfd, sockaddr_cast(addr), &addrlen);
   setNonBlockAndCloseOnExec(connfd);
 #else

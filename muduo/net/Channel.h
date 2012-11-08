@@ -87,6 +87,12 @@ class Channel : boost::noncopyable
   static const int kReadEvent;
   static const int kWriteEvent;
 
+  static const int kReadCheck;
+  static const int kWriteCheck;
+  static const int kErrorCheck;
+  static const int kNotfdCheck;
+  static const int kCloseCheck;
+  
   EventLoop* loop_;
   const int  fd_;
   int        events_;
