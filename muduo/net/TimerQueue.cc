@@ -86,11 +86,16 @@ TimerTriger::TimerTriger()
     int ret = pipe(fds);
     if (ret < 0)
     {
+        timerfd_ = -1;
+        writefd_ = -1;
         LOG_SYSFATAL << "Failed in timerfd_create";
     }
-    timerfd_ = fds[0];
-    writefd_ = fds[1];
-    timerThread_.start();
+    else
+    {
+        timerfd_ = fds[0];
+        writefd_ = fds[1];
+        timerThread_.start();
+    }
 }
 
 TimerTriger::~TimerTriger()
@@ -121,12 +126,13 @@ void TimerTriger::timerThread()
     {
         nextTime = nextTime + 100;
         thisTime = now();
-        if(expiration_ != 0 && expiration_<thisTime)
+        if(thisTime < nextTime)
+            usleep(static_cast<useconds_t>(nextTime-thisTime));
+        if(expiration_ != 0 && nextTime>expiration_)
         {
             ::write(writefd_, &expiration_, sizeof expiration_);
-            thisTime = now();
+            expiration_ = 0;
         }
-        usleep(static_cast<useconds_t>(nextTime-thisTime));
     }
 }
 #endif

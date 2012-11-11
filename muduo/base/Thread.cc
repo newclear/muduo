@@ -28,13 +28,18 @@ namespace CurrentThread
   const bool sameType = boost::is_same<int, pid_t>::value;
   BOOST_STATIC_ASSERT(sameType);
 }
+static int s_mainthreadTid = 0;
 
 namespace detail
 {
 
 pid_t gettid()
 {
+#ifndef __MACH__
   return static_cast<pid_t>(::syscall(SYS_gettid));
+#else
+  return static_cast<pid_t>(::syscall(SYS_thread_selfid));
+#endif
 }
 
 void afterFork()
@@ -51,7 +56,7 @@ class ThreadNameInitializer
   ThreadNameInitializer()
   {
     muduo::CurrentThread::t_threadName = "main";
-    CurrentThread::tid();
+    s_mainthreadTid = CurrentThread::tid();
     pthread_atfork(NULL, NULL, &afterFork);
   }
 };
@@ -67,14 +72,15 @@ void CurrentThread::cacheTid()
   if (t_cachedTid == 0)
   {
     t_cachedTid = detail::gettid();
-    int n = snprintf(t_tidString, sizeof t_tidString, "%5d ", t_cachedTid);
-    assert(n == 6); (void) n;
+    int n = snprintf(t_tidString, sizeof t_tidString, "%7d ", t_cachedTid);
+    assert(n == 8);
+    (void) n;
   }
 }
 
 bool CurrentThread::isMainThread()
 {
-  return tid() == ::getpid();
+  return tid() == s_mainthreadTid;
 }
 
 AtomicInt32 Thread::numCreated_;
