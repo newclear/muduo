@@ -1,1 +1,8 @@
+GPATH
+GRTAGS
+GTAGS
+bin
+build
+obj
+tags
 *.swp
