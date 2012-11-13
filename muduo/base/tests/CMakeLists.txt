@@ -36,7 +36,7 @@ target_link_libraries(logstream_bench muduo_base)
 
 if(BOOSTTEST_LIBRARY)
 add_executable(logstream_test LogStream_test.cc)
-target_link_libraries(logstream_test muduo_base boost_unit_test_framework)
+target_link_libraries(logstream_test muduo_base boost_unit_test_framework-mt)
 endif()
 
 add_executable(mutex_test Mutex_test.cc)

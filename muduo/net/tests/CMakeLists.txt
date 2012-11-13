@@ -12,10 +12,10 @@ target_link_libraries(eventloopthreadpool_unittest muduo_net)
 
 if(BOOSTTEST_LIBRARY)
 add_executable(buffer_unittest Buffer_unittest.cc)
-target_link_libraries(buffer_unittest muduo_net boost_unit_test_framework)
+target_link_libraries(buffer_unittest muduo_net boost_unit_test_framework-mt)
 
 add_executable(inetaddress_unittest InetAddress_unittest.cc)
-target_link_libraries(inetaddress_unittest muduo_net boost_unit_test_framework)
+target_link_libraries(inetaddress_unittest muduo_net boost_unit_test_framework-mt)
 endif()
 
 add_executable(timerqueue_unittest TimerQueue_unittest.cc)
