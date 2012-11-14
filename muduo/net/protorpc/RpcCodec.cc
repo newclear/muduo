@@ -12,7 +12,7 @@
 #include <muduo/net/Endian.h>
 #include <muduo/net/TcpConnection.h>
 
-#include <muduo/net/protorpc/rpc.pb.h>
+#include <rpc.pb.h>
 #include <muduo/net/protorpc/google-inl.h>
 
 #include <zlib.h>
