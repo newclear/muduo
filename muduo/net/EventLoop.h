@@ -54,6 +54,16 @@ class EventLoop : boost::noncopyable
   void quit();
 
   ///
+  /// Splited loop function.
+  ///
+  /// Must be called in the same thread as creation of the object.
+  ///
+  void beginLoop();
+  bool shouldQuit() const { return quit_; }
+  void dispatch();
+  void endLoop();
+
+  ///
   /// Time when poll returns, usually means data arrivial.
   ///
   Timestamp pollReturnTime() const { return pollReturnTime_; }

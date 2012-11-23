@@ -112,38 +112,53 @@ EventLoop::~EventLoop()
   t_loopInThisThread = NULL;
 }
 
-void EventLoop::loop()
+void EventLoop::beginLoop()
 {
   assert(!looping_);
   assertInLoopThread();
   looping_ = true;
   quit_ = false;
   LOG_TRACE << "EventLoop " << this << " start looping";
+}
 
-  while (!quit_)
+void EventLoop::dispatch()
+{
+  assert(looping_);
+  assertInLoopThread();
+  activeChannels_.clear();
+  pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
+  ++iteration_;
+  if (Logger::logLevel() <= Logger::TRACE)
   {
-    activeChannels_.clear();
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
-    ++iteration_;
-    if (Logger::logLevel() <= Logger::TRACE)
-    {
-      printActiveChannels();
-    }
-    // TODO sort channel by priority
-    eventHandling_ = true;
-    for (ChannelList::iterator it = activeChannels_.begin();
-        it != activeChannels_.end(); ++it)
-    {
-      currentActiveChannel_ = *it;
-      currentActiveChannel_->handleEvent(pollReturnTime_);
-    }
-    currentActiveChannel_ = NULL;
-    eventHandling_ = false;
-    doPendingFunctors();
+    printActiveChannels();
   }
+  // TODO sort channel by priority
+  eventHandling_ = true;
+  for (ChannelList::iterator it = activeChannels_.begin();
+      it != activeChannels_.end(); ++it)
+  {
+    currentActiveChannel_ = *it;
+    currentActiveChannel_->handleEvent(pollReturnTime_);
+  }
+  currentActiveChannel_ = NULL;
+  eventHandling_ = false;
+  doPendingFunctors();
+}
 
+void EventLoop::endLoop()
+{
+  assert(looping_);
+  assertInLoopThread();
   LOG_TRACE << "EventLoop " << this << " stop looping";
   looping_ = false;
+}
+
+void EventLoop::loop()
+{
+  beginLoop();
+  while (!shouldQuit())
+    dispatch();
+  endLoop();
 }
 
 void EventLoop::quit()
