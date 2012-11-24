@@ -20,6 +20,11 @@ namespace net
 namespace sockets
 {
 
+int createBlockingOrDie();
+int  acceptBlocking(int sockfd, struct sockaddr_in* addr);
+ssize_t readn(int sockfd, void *buf, size_t count);
+ssize_t writen(int sockfd, const void *buf, size_t count);
+
 ///
 /// Creates a non-blocking socket file descriptor,
 /// abort if any error.

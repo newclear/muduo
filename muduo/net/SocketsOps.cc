@@ -58,57 +58,8 @@ void setNonBlockAndCloseOnExec(int sockfd)
   (void)ret;
 }
 
-}
-
-int sockets::createNonblockingOrDie()
+void checkAcceptError(int connfd)
 {
-  // socket
-#if defined(VALGRIND) || !defined(__linux__)
-  int sockfd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (sockfd < 0)
-  {
-    LOG_SYSFATAL << "sockets::createNonblockingOrDie";
-  }
-
-  setNonBlockAndCloseOnExec(sockfd);
-#else
-  int sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
-  if (sockfd < 0)
-  {
-    LOG_SYSFATAL << "sockets::createNonblockingOrDie";
-  }
-#endif
-  return sockfd;
-}
-
-void sockets::bindOrDie(int sockfd, const struct sockaddr_in& addr)
-{
-  int ret = ::bind(sockfd, sockaddr_cast(&addr), sizeof addr);
-  if (ret < 0)
-  {
-    LOG_SYSFATAL << "sockets::bindOrDie";
-  }
-}
-
-void sockets::listenOrDie(int sockfd)
-{
-  int ret = ::listen(sockfd, SOMAXCONN);
-  if (ret < 0)
-  {
-    LOG_SYSFATAL << "sockets::listenOrDie";
-  }
-}
-
-int sockets::accept(int sockfd, struct sockaddr_in* addr)
-{
-  socklen_t addrlen = sizeof *addr;
-#if defined(VALGRIND) || !defined(__linux__)
-  int connfd = ::accept(sockfd, sockaddr_cast(addr), &addrlen);
-  setNonBlockAndCloseOnExec(connfd);
-#else
-  int connfd = ::accept4(sockfd, sockaddr_cast(addr),
-                         &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
-#endif
   if (connfd < 0)
   {
     int savedErrno = errno;
@@ -140,6 +91,118 @@ int sockets::accept(int sockfd, struct sockaddr_in* addr)
         break;
     }
   }
+}
+
+}
+
+int sockets::createBlockingOrDie()
+{
+  int sockfd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (sockfd < 0)
+  {
+    LOG_SYSFATAL << "sockets::createNonblockingOrDie";
+  }
+  return sockfd;
+}
+
+int sockets::acceptBlocking(int sockfd, struct sockaddr_in* addr)
+{
+  socklen_t addrlen = sizeof *addr;
+  int connfd = ::accept(sockfd, sockaddr_cast(addr), &addrlen);
+  checkAcceptError(connfd);
+  return connfd;
+}
+
+ssize_t sockets::readn(int sockfd, void *buf, size_t count)
+{
+  char*   ptr   = static_cast<char*>(buf);
+  ssize_t nleft = count;
+  ssize_t nread = 0;
+  while (nleft > 0)
+  {
+    nread = read(sockfd, ptr, nleft);
+    if(nread < 0)
+    {
+      if(errno == EINTR)
+        nread = 0; // and call read() again
+      else
+        return -1;
+    }
+    else if(nread == 0) //EOF
+      break;
+
+    nleft -= nread;
+    ptr += nread;
+  }
+  return count - nleft; //return >= 0
+}
+
+ssize_t sockets::writen(int sockfd, const void *buf, size_t count)
+{
+  const char* ptr  = static_cast<const char*>(buf);
+  ssize_t nleft    = count;
+  ssize_t nwritten = 0;
+  while (nleft > 0) {
+    nwritten = write(sockfd, ptr, nleft);
+    if(nwritten <= 0)
+    {
+      if(nwritten < 0 && errno == EINTR)
+        nwritten = 0; // and call write() again
+      else
+        return -1; // error
+    }
+
+    nleft -= nwritten;
+    ptr += nwritten;
+  }
+  return count;
+}
+
+int sockets::createNonblockingOrDie()
+{
+  // socket
+#if defined(VALGRIND) || !defined(__linux__)
+  int sockfd = createBlockingOrDie();
+  setNonBlockAndCloseOnExec(sockfd);
+#else
+  int sockfd = ::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
+  if (sockfd < 0)
+  {
+    LOG_SYSFATAL << "sockets::createNonblockingOrDie";
+  }
+#endif
+  return sockfd;
+}
+
+void sockets::bindOrDie(int sockfd, const struct sockaddr_in& addr)
+{
+  int ret = ::bind(sockfd, sockaddr_cast(&addr), sizeof addr);
+  if (ret < 0)
+  {
+    LOG_SYSFATAL << "sockets::bindOrDie";
+  }
+}
+
+void sockets::listenOrDie(int sockfd)
+{
+  int ret = ::listen(sockfd, SOMAXCONN);
+  if (ret < 0)
+  {
+    LOG_SYSFATAL << "sockets::listenOrDie";
+  }
+}
+
+int sockets::accept(int sockfd, struct sockaddr_in* addr)
+{
+#if defined(VALGRIND) || !defined(__linux__)
+  int connfd = acceptBlocking(sockfd, addr);
+  setNonBlockAndCloseOnExec(connfd);
+#else
+  socklen_t addrlen = sizeof *addr;
+  int connfd = ::accept4(sockfd, sockaddr_cast(addr),
+                         &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+  checkAcceptError(connfd);
+#endif
   return connfd;
 }
 
